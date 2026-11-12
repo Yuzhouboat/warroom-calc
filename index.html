@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>War Room Battle Calculator</title>
+<style>
+  :root { --bg:#14181f; --panel:#1d232d; --line:#2e3744; --text:#e6e9ee; --mute:#8d97a6;
+          --axis:#d9534f; --allied:#4a90d9; --accent:#e0b44c; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 system-ui,sans-serif; }
+  main { max-width:960px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:4px 0 12px; }
+  .bar { display:flex; flex-wrap:wrap; gap:12px 20px; align-items:center; background:var(--panel);
+         border:1px solid var(--line); border-radius:8px; padding:10px 14px; margin-bottom:14px; }
+  .bar label { display:flex; align-items:center; gap:6px; color:var(--mute); }
+  select, input[type=number] { background:#10141a; color:var(--text); border:1px solid var(--line);
+         border-radius:5px; padding:4px 6px; font:inherit; }
+  input[type=number] { width:58px; text-align:center; }
+  .sides { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:700px) { .sides { grid-template-columns:1fr; } }
+  .side { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; border-top:3px solid var(--c); }
+  .side h2 { margin:0 0 8px; font-size:16px; color:var(--c); display:flex; justify-content:space-between; align-items:center; }
+  table { width:100%; border-collapse:collapse; }
+  th { font-weight:500; color:var(--mute); font-size:12px; text-align:center; padding:2px 4px; }
+  th:first-child, td:first-child { text-align:left; }
+  td { padding:3px 4px; text-align:center; }
+  td .v { display:block; font-size:11px; color:var(--mute); }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+  .opt { margin-top:8px; color:var(--mute); }
+  button { background:var(--accent); color:#1a1405; border:0; border-radius:6px; padding:9px 22px;
+           font:600 15px system-ui; cursor:pointer; }
+  button:disabled { opacity:.5; }
+  .step { display:inline-flex; align-items:stretch; }
+  .step input[type=number] { width:48px; height:40px; font-size:17px; border-radius:0; border-left:0; border-right:0;
+         -moz-appearance:textfield; appearance:textfield; }
+  .step input::-webkit-outer-spin-button, .step input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+  .step .sb { width:40px; height:40px; padding:0; font:600 22px/1 system-ui; border-radius:0; background:#2a3342;
+         color:var(--text); border:1px solid var(--line); touch-action:manipulation; user-select:none; }
+  .step .sb:first-child { border-radius:6px 0 0 6px; }
+  .step .sb:last-child { border-radius:0 6px 6px 0; }
+  .step .sb:hover { background:#374257; }
+  .step .sb:active { background:var(--accent); color:#1a1405; }
+  .unit { padding:8px 0; border-top:1px solid var(--line); }
+  .unit:first-child { border-top:0; }
+  .uhead { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; font-weight:500; }
+  .zones { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .zones.one { grid-template-columns:1fr; }
+  .zone { border:1.5px dashed var(--line); border-radius:8px; padding:5px 7px 7px; min-height:68px; background:#171c24; transition:background .1s,border-color .1s; }
+  .zone.over { border-color:var(--accent); background:#262c1c; }
+  .zl { display:block; font-size:11.5px; color:var(--mute); margin-bottom:4px; }
+  .toks { display:flex; flex-wrap:wrap; gap:5px; min-height:32px; }
+  .tok { height:38px; width:auto; cursor:grab; user-select:none; -webkit-user-drag:element; touch-action:none;
+         filter:drop-shadow(0 1px 2px #0009); }
+  .tok.ship { height:auto; width:70px; }
+  .tok:active { cursor:grabbing; }
+  .uico { height:24px; width:auto; vertical-align:middle; margin-right:7px; }
+  .uico.ship { height:auto; width:40px; }
+  .tok.sel { filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px var(--accent)); transform:scale(1.1); }
+  .zone.target { border-color:#8a7a44; cursor:pointer; }
+  .zone.target:hover { background:#262c1c; }
+  .zl { cursor:pointer; }
+  .zl:hover { color:var(--text); text-decoration:underline dotted; }
+  .selhint { font-size:12px; color:var(--accent); font-weight:500; margin-left:8px; }
+  .tok.drag { opacity:.35; }
+  .recbar { display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin:6px 0 4px; }
+  .recbar label { display:flex; align-items:center; gap:6px; color:var(--mute); }
+  .recs { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-top:10px; }
+  /* Every card spans 4 shared rows (header, layout, body, button) so the same parts line up across cards. */
+  .recs > .card { display:grid; grid-template-rows:subgrid; grid-row:span 4; row-gap:0; align-content:start; }
+  .card { border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:#171c24; }
+  .card.cur { border-style:dashed; }
+  .pair { display:flex; flex-direction:column; gap:12px; }
+  .card h4 { margin:0 0 6px; font-size:14px; color:var(--accent); font-weight:600; }
+  .card.cur h4 { color:var(--mute); }
+  .card .lay { display:grid; grid-template-columns:auto 1fr; gap:3px 8px; align-items:center; font-size:13px; margin:6px 0 8px; }
+  .card .lay .n { color:var(--mute); }
+  .card .stats { display:grid; grid-template-columns:1fr auto; gap:2px 10px; font-size:13px; border-top:1px solid var(--line); padding-top:6px; }
+  .card details.pred { margin-top:10px; border-top:1px solid var(--line); padding-top:8px; font-size:13px; }
+  .card details.pred > summary { cursor:pointer; color:var(--accent); font-weight:600; }
+  .card .applyrow { height:34px; margin-top:8px; display:flex; align-items:center; }   /* button and 'applied' label take the same height */
+  .card .applyrow button { margin:0; }
+  .card .applyrow .dice { margin:0; }
+  .card details.pred .hint { color:var(--mute); font-size:12px; margin:4px 0 6px; }
+  .card details.pred details { border:1px solid var(--line); border-radius:6px; padding:5px 8px; margin:5px 0; }
+  .card details.pred details > summary { cursor:pointer; display:flex; justify-content:space-between; gap:8px; }
+  .card .stats b { font-variant-numeric:tabular-nums; }
+  .card button { margin-top:8px; padding:6px 14px; font-size:13px; }
+  details.rules { margin-top:18px; }
+  details.rules summary { cursor:pointer; font-size:16px; font-weight:600; padding:2px 0; }
+  details.rules .body { font-size:13.5px; color:var(--text); }
+  details.rules h4 { margin:16px 0 4px; font-size:14px; color:var(--accent); }
+  details.rules p, details.rules li { margin:3px 0; color:#c9cfd9; }
+  details.rules ul { padding-left:20px; margin:4px 0; }
+  details.rules table { margin:6px 0 4px; font-size:13px; }
+  details.rules th, details.rules td { padding:4px 8px; text-align:left; border-bottom:1px solid var(--line); }
+  details.rules .cap { color:var(--mute); font-size:12px; margin-top:8px; }
+  .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; }
+  .sharebar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; }
+  .sharebar input[type=text] { flex:1 1 260px; min-width:0; background:#10141a; color:var(--mute); border:1px solid var(--line);
+         border-radius:5px; padding:7px 8px; font:12.5px ui-monospace,monospace; }
+  .sharebar .msg { font-size:13px; color:#6fcf8a; min-width:90px; }
+  button.sec { background:transparent; color:var(--text); border:1px solid var(--line); margin-left:6px; }
+  button.sec:hover { background:#2a3342; }
+  button.ghost { background:transparent; color:var(--text); border:1px solid var(--line); padding:4px 12px; font:500 14px system-ui; margin-left:auto; }
+  #results { margin-top:16px; }
+  .odds { display:flex; height:30px; border-radius:6px; overflow:hidden; margin:6px 0 4px; font-size:13px; font-weight:600; }
+  .odds div { display:flex; align-items:center; justify-content:center; min-width:0; overflow:hidden; white-space:nowrap; }
+  .legend { color:var(--mute); font-size:13px; display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px; }
+  .res { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:12px; }
+  table.dist { margin-bottom:8px; width:100%; table-layout:fixed; } table.dist th:first-child, table.dist td:first-child { width:18%; } table.dist td.dbar { width:38%; } table.dist th:nth-child(n+3), table.dist td:nth-child(n+3) { width:30%; text-align:right; } table.dist td.dbar div { height:10px; background:var(--accent, #6a8fd8); border-radius:2px; }
+  .res h3 { margin:0 0 6px; font-size:14px; color:var(--mute); font-weight:500; }
+  .note { color:var(--mute); font-size:12.5px; margin-top:16px; }
+  .note li { margin:2px 0; }
+  .dice { font-size:13px; color:var(--mute); margin-top:6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1 data-i18n="title">War Room Battle Calculator</h1>
+
+  <div class="bar">
+    <label><span data-i18n="battle">Battle</span>
+      <select id="mode"><option value="land" data-i18n="land">Land</option><option value="sea" data-i18n="sea">Sea</option></select>
+    </label>
+    <label><span data-i18n="runs">Runs</span>
+      <select id="runs"><option>5000</option><option selected>20000</option><option>100000</option></select>
+    </label>
+    <button id="lang" class="ghost" type="button" aria-label="Language">中文</button>
+  </div>
+
+  <div class="sides">
+    <section class="side" style="--c:var(--axis)"><h2><span data-i18n="axis">Axis</span> <span id="dice0" class="dice"></span></h2>
+      <div id="t0" class="units"></div><div class="opt" id="portWrap0"></div></section>
+    <section class="side" style="--c:var(--allied)"><h2><span data-i18n="allies">Allies</span> <span id="dice1" class="dice"></span></h2>
+      <div id="t1" class="units"></div><div class="opt" id="portWrap1"></div></section>
+  </div>
+
+  <p class="actions"><button id="go" data-i18n="calc">Calculate</button> <button id="reset" type="button" class="sec" data-i18n="reset">Reset</button></p>
+
+  <section class="res" id="rec">
+    <h3 data-i18n="recTitle">Stance recommendation</h3>
+    <div class="recbar">
+      <label><span data-i18n="recFor">Advise</span>
+        <select id="recSide"><option value="0" data-i18n="axis">Axis</option><option value="1" data-i18n="allies">Allies</option></select>
+      </label>
+      <label><span data-i18n="recOrder">Stances</span>
+        <select id="recOrder"><option value="set" data-i18n="orderSet">Opponent already set</option><option value="first" data-i18n="orderFirst">I set first (they reply)</option></select>
+      </label>
+      <label id="holderBox"><span data-i18n="recHolder">Land held by</span>
+        <select id="recHolder"><option value="0" data-i18n="axis">Axis</option><option value="1" data-i18n="allies">Allies</option></select>
+      </label>
+      <button id="recGo" type="button" data-i18n="recGo">Find best setup</button>
+      <span id="recProg" class="dice"></span>
+    </div>
+    <div id="recOut"></div>
+  </section>
+
+  <div id="results"></div>
+
+  <ul class="note">
+    <li data-i18n-html="n1"></li>
+    <li data-i18n-html="n2"></li>
+    <li data-i18n-html="n3"></li>
+    <li data-i18n-html="n4"></li>
+  </ul>
+
+  <details class="res rules" id="rules">
+    <summary data-i18n="rulesTitle">Rules applied by this calculator</summary>
+    <div class="body" data-i18n-html="rulesHtml"></div>
+    <div id="rulesTables"></div>
+  </details>
+</main>
+
+<script src="engine.js"></script>
+<script src="recommend.js"></script>
+<script>
+const W = window.WarRoom;
+const $ = (id) => document.getElementById(id);
+const COLORS = { Y:'#e8c93a', B:'#4a8fe0', G:'#4caf62', R:'#e0524c' };
+
+const I18N = {
+  en: {
+    title: 'War Room Battle Calculator', battle: 'Battle', land: 'Land', sea: 'Sea', runs: 'Runs',
+    axis: 'Axis', allies: 'Allies', calc: 'Calculate', reset: 'Reset', langBtn: '中文',
+    unit: 'Unit', stance1: 'Stance 1', stance2: 'Stance 2', raid: 'strategic raid',
+    port: 'Port advantage (+2 dice, free repair)',
+    dice: (a, b, mode) => `dice: air ${a} · ${mode === 'sea' ? 'sea' : 'land'} ${b}`,
+    outcome: (n) => `Outcome after one battle round · ${n} runs`,
+    seg0: 'Axis wipes Allies', segBoth: 'Both survive', segMutual: 'Mutual wipe', seg1: 'Allies wipe Axis',
+    cap0: 'Axis takes control', capNone: 'Control unchanged', cap1: 'Allies take control',
+    atLeastTitle: (name) => `${name}: units left (chance)`, atLeastLS: (mode) => mode === 'sea' ? 'Sea units' : 'Land units', atLeastAir: 'Air units', atLeast: 'At least',
+    leadTitle: 'Who has more land/sea units left', lead0: 'Axis has more', leadTie: 'Equal', lead1: 'Allies have more',
+    expected: (side) => `${side}: expected result`,
+    start: 'Start', lost: 'Lost', survive: 'Survive',
+    selected: (n) => `${n} selected`, selTip: 'Click to select all in this box',
+    recTitle: 'Stance recommendation', recFor: 'Advise', recHolder: 'Land held by', recOrder: 'Stances', orderSet: 'Opponent already set', orderFirst: 'I set first (they reply)', theirReply: 'Their best reply', defaultTag: 'Default: smallest loss compared with the opponent', sameAsDefault: 'Same layout as the default card', onBoard: 'Applied: both layouts are on the board', onBoardMine: 'Applied: this layout is on the board', worstCase: 'Worst case if they reply best', recGo: 'Find best setup', recBusy: 'Searching',
+    mExch: 'Cost exchange (their loss − yours)', mLead: 'Unit lead (yours − theirs)',
+    predTitle: 'Opponent replies: if they …', predHint: 'The opponent\'s best reply under each goal they might play for, and what it leaves you.', predFigure: 'The figure on each line is your result on this card\'s goal(s).',
+    objE: { control: 'Take the land', hold: 'Keep the land', balanced: 'Best cost exchange', unitDiff: 'Biggest unit lead' },
+    recNone: 'Nothing to optimise: add units that have two stances.', recCur: 'Your current setup', recApply: 'Apply',
+    recSame: 'Same as your current setup',
+    obj: { control: 'Most chance to take control', hold: 'Best chance to keep control (if you hold the land)', balanced: 'Best cost exchange (their loss − yours)',
+           unitDiff: 'Biggest lead in land/sea units left (yours − theirs)' },
+    mControl: 'Chance of control', mHold: 'Chance of keeping control', mKeptOwn: 'Your land/sea units left', mKeptEnemy: 'Enemy land/sea units left', yellowTip: 'yellow (other) resources',
+    recNoteFirst: 'You set first and the opponent sees your stances, so each layout is judged against the opponent\'s best reply: the layout of theirs that does the most damage to the goal on that card. The figures are the worst case for you (damaged units count as survivors). The first card, best cost exchange (the enemy loses much more than you), is the default; each card is judged under its own worst-case reply. Your current setup is not used. When the search finishes, the default card (your layout and the opponent\'s best reply for the same trade) is put on the board for you. Every section has its own Apply button: it puts your layout and that section\'s opponent reply on the board and recalculates, so you can look closely at any case. Fixed stances: bombers are always on stance 2 (stance 1 is the strategic raid, which is not modelled). If the other side has no air units, or no land/sea units, the dice that could only hit them are worthless, so a unit goes straight to the stance that is at least as good on the useful dice and on hit points, without being searched.',
+    mEnemyCost: 'Enemy production cost lost', mOwnCost: 'Your production cost lost', unitsWord: 'units',
+    recNote: 'Assumes the other side keeps its current stances. "Control" (land battles only) = you still have a land unit and the enemy has none; air units cannot capture or defend. After one round it is often 0%, so ties are broken by how much of the enemy\'s land force is destroyed. Sea battles capture nothing, so that goal is not offered. "Land/sea units left" compares both sides\' surviving non-air units, by production cost. Production cost is shown in yellow ("other") resources: oil counts 2.5 and steel 1.67, using the rulebook trade rates (2 oil = 3 steel = 5 other), so a lost battleship weighs far more than a lost infantry. Land/sea units left are plain unit counts (air units are not counted). Damaged units count as survivors. Fixed stances: bombers are always on stance 2 (stance 1 is the strategic raid, which is not modelled). If the other side has no air units, or no land/sea units, the dice that could only hit them are worthless, so a unit goes straight to the stance that is at least as good on the useful dice and on hit points, without being searched.',
+    stanceShort: 'S',
+    rulesTitle: 'Rules applied by this calculator', rulesHtml: `
+<h4>1. Dice</h4>
+<ul>
+<li>Combat uses 12-sided dice with these faces: 1 white, 1 black, 1 red, 2 green, 3 blue, 4 yellow.</li>
+<li>A coloured die hits an enemy unit whose type has that colour (colours are in the table below). <b>Black</b> is wild: it can hit any eligible enemy unit. <b>White</b> can only hit a unit that is already damaged (down to its last hit), and never a damaged submarine.</li>
+<li><b>Choosing targets</b> (the attacker's best choice, in this order of priority): first, wherever a choice exists, the one that lets <b>the most white dice in the batch be used</b> (a coloured or black hit that leaves a unit damaged gives white a target); then, in the air phase, <b>planes that also fight in the land/sea phase</b> are hit before planes that only fight in the air, since killing them removes dice from the next phase; then the highest firepower per hit point.</li>
+</ul>
+
+<h4>2. Phases</h4>
+<ul>
+<li><b>Air phase</b> (only if any air unit is present): fighters, bombers and units with anti-air dice fire; <b>only air units can be hit</b>.</li>
+<li><b>Land/sea phase</b>: all land/sea units and the surviving air units (including damaged ones) fire; <b>only land/sea units can be hit</b>. Air units destroyed in the air phase do not fire.</li>
+<li>One calculation is one battle round (both phases once). The calculator does not play follow-up rounds.</li>
+</ul>
+
+<h4>3. How many dice</h4>
+<ul>
+<li>Each side's dice = (number of units × the dice value of the stance they are in), summed over all units. The value depends on the phase: the first number of a stance (air) in the air phase, the second (land/sea) in the land/sea phase.</li>
+<li>The total is fixed <b>before</b> rolling, counted from units alive at the start of the phase, and capped at <b>30</b>.</li>
+<li><b>Port advantage</b> (sea battle, tick the box): +2 dice in the land/sea phase for a side that still has a naval unit (the cap of 30 still applies).</li>
+</ul>
+
+<h4>4. Rolling and hit order</h4>
+<ul>
+<li>Dice are rolled in batches of 10 (the last batch may be smaller). After each batch the hits are applied before the next batch is rolled. Hits never add dice, and units destroyed earlier still contribute their already-counted dice.</li>
+<li>Within a batch, hits are resolved in this order: yellow, blue, green, red, black, white.</li>
+<li>Who rolls first does not change the odds, because neither side's dice count nor hits depend on the other side's rolls, so the calculator has no such setting.</li>
+</ul>
+
+<h4>5. Hit points and damage</h4>
+<ul>
+<li>Artillery, fighters, bombers, cruisers and submarines are destroyed by <b>2 hits</b>; carriers and battleships take <b>3 hits</b> in either stance.</li>
+<li><b>Infantry depends on its stance</b>: <b>2 hits</b> in Stance 1 (– / 1) but only <b>1 hit</b> in Stance 2 (– / 2). Stance 2 infantry has no damaged state at all, so a single hit of its colour (or a black die) destroys it and <b>white dice can never hit it</b>.</li>
+<li><b>Armor depends on its stance</b>: <b>3 hits</b> in Stance 1 (the 1 / 2 row, which has the extra light-damage cell) but only <b>2 hits</b> in Stance 2 (the – / 4 row). Hit points are set by the stance a unit is in when the battle starts.</li>
+<li>After the first hit a 2-hit unit is <b>damaged</b>. A 3-hit unit is only <b>lightly damaged</b> after one hit (needs no repair) and <b>damaged</b> after two.</li>
+<li>Damaged units are hit before undamaged units of the same row (unit type and stance).</li>
+<li><b>Submarines</b>: once damaged and still alive, a submarine dives after the enemy's batch, so it escapes further hits (and white cannot hit it).</li>
+</ul>
+
+<h4>6. Unit-type advantage</h4>
+<ul>
+<li>In the land/sea phase only, the side with more <b>different land/sea unit types</b> (air units do not count; stances of one type count once) has the advantage.</li>
+<li>The other side's <b>black and white dice count as misses</b> for the whole phase. It is decided once at the start of the phase.</li>
+</ul>
+
+<h4>7. Who the enemy hits (assumption)</h4>
+<p>The rules let the rolling player choose targets. The calculator assumes they always put each hit where it removes the most enemy firepower for that phase (a damaged unit counts for more because it is closer to dying), choosing damaged units first within a row.</p>
+
+<h4>8. What the results mean</h4>
+<ul>
+<li><b>Lost</b>: units destroyed. <b>Survive</b>: units still alive. <b>Damaged units count as survivors</b> everywhere (results and recommendations): the resource cost of repairing them is not modelled, nor is the port-advantage free repair.</li>
+<li>Outcome bar, land battle: <b>takes control</b> = after the battle that side still has a land unit and the other side has none (air units can neither capture nor defend a territory); if both sides, or neither side, have land units left, <b>control is unchanged</b>. Sea battle: nothing is captured, so the bar shows <b>wipes</b> = that side destroyed every enemy unit and still has units, <b>both survive</b>, or <b>mutual wipe</b>. The second bar shows how often each side ends with more <b>land/sea units left</b>, comparing the number of surviving non-air units (air units are not counted); "Equal" includes battles where neither side has any left. All figures are averages over many random simulated battles (the "Runs" setting).</li>
+</ul>
+
+<h4>9. Recommendations</h4>
+<ul>
+<li>The recommender tries different splits of each unit type between its stances for the chosen side and keeps the other side as you set it. Layouts are compared on identical random dice; the best candidates are then re-tested with 6,000 runs.</li>
+<li>The goals offered: <b>Most chance to take control</b> (land battles only, rulebook p.19: you still have a land unit and the enemy has none; air units don't count for either side, and a sea battle has no control at all; ties are broken by how much of the enemy's land force is destroyed). <b>Best chance to keep control</b> is for when you already hold the land (<b>Land held by</b> defaults to the side you advise; if you hold the land only "keep control" is offered, if the enemy holds it only "take control"): it maximises the chance that the enemy does <i>not</i> take it (that is, 100% minus the enemy's chance of ending with a land unit while you have none); ties are broken by losing as little land force as possible. <b>Best cost exchange</b> = the production cost of the enemy units you destroy minus the production cost of yours you lose. <b>Biggest lead in land/sea units left</b> = the number of your surviving non-air units minus the number of the opponent's, as large as possible (air units are not counted on either side).</li>
+<li>Production cost is shown in <b>yellow ("other") resources</b>: the dots in a unit's price are converted with the rulebook trade rates (2 oil = 3 steel = 5 other), so 1 oil counts as 2.5 yellow and 1 steel as 1.67 yellow. A battleship therefore counts for much more than an infantry. Damaged units count as survivors.</li>
+<li>For many units the search is a hill-climb, so it finds a very good layout but is not guaranteed to find the very best.</li>
+</ul>
+
+<h4>10. Not modelled</h4>
+<ul>
+<li>Cruiser escort stance, strategic bombing and convoy raids (the bomber's strategic stance only fires air dice here), standing garrisons of empty territories, the optional batch-cap rule and the quick-combat variant.</li>
+<li>Several allied nations in one battle (treat them as one side), carrier fighter tokens' special handling, troop transports, and the follow-up rounds of an engaged zone.</li>
+</ul>
+<p class="cap">Source: the 2025 Chinese rulebook, battle sections, battle board and the production table on the order sheet (p.22). Production cost = the oil, steel and other dots, converted to yellow resources (2 oil = 3 steel = 5 other). Unit tables below are generated from the calculator's own data.</p>
+`,
+    tHead: ['Unit', 'Colour', 'Production cost: oil · steel · other = in yellow', 'Stance 1: dice (air / land-sea) · hits to destroy', 'Stance 2'], hitsWord: (n) => (n === 1 ? '1 hit' : `${n} hits`),
+    tLand: 'Land battle', tSea: 'Sea battle',
+    colors: { Y: 'Yellow', B: 'Blue', G: 'Green', R: 'Red' },
+    share: 'Share result', shareCopied: 'Link copied!', shareManual: 'Copy the link below',
+    shareHint: 'Anyone who opens this link sees the same setup and the same numbers.',
+    addUnits: 'Add some units first.', simulating: 'Simulating…',
+    n1: 'Set each unit type\'s total with − / +. <b>Click tokens to select</b> (click a box title to select all in it), then <b>drag</b> any selected token — or tap a stance box — to move them all at once. Each stance shows dice as <b>air / land-or-sea</b>.',
+    n2: 'Dice counts are fixed before rolling (cap 30), rolled in batches of 10, hits applied between batches. Black is wild, white only hits damaged units (never damaged subs).',
+    n3: 'Unit-type advantage (land/sea phase) and port advantage (+2 dice, sea) are applied automatically; tick "Port" for the side that has it.',
+    n4: 'Hit assignment assumes the attacker spends hits where they remove the most firepower, damaged units first. Not modelled: cruiser escort stance, strategic raids, convoy raids, standing garrisons, the optional batch-cap rule.',
+    units: { infantry:'Infantry', artillery:'Artillery', armor:'Armor', fighter:'Fighter', bomber:'Bomber',
+             submarine:'Submarine', cruiser:'Cruiser', carrier:'Carrier', battleship:'Battleship' },
+  },
+  zh: {
+    title: '作战室战斗计算器', battle: '战斗类型', land: '陆战', sea: '海战', runs: '模拟次数',
+    axis: '轴心', allies: '同盟', calc: '计算', reset: '重置', langBtn: 'English',
+    unit: '单位', stance1: '姿态 1', stance2: '姿态 2', raid: '战略轰炸突袭',
+    port: '港口优势（+2 颗骰子，免费维修）',
+    dice: (a, b, mode) => `骰子：空战 ${a} · ${mode === 'sea' ? '海战' : '陆战'} ${b}`,
+    outcome: (n) => `一次战斗后的结果 · 模拟 ${n} 次`,
+    seg0: '轴心全歼同盟', segBoth: '双方均有幸存', segMutual: '同归于尽', seg1: '同盟全歼轴心',
+    cap0: '轴心夺取领土', capNone: '控制权不变', cap1: '同盟夺取领土',
+    atLeastTitle: (name) => `${name}：剩余单位数（概率）`, atLeastLS: (mode) => mode === 'sea' ? '海军单位' : '陆军单位', atLeastAir: '空军单位', atLeast: '至少',
+    leadTitle: '谁剩余的陆 / 海军单位更多', lead0: '轴心更多', leadTie: '相同', lead1: '同盟更多',
+    expected: (side) => `${side}：预期结果`,
+    start: '初始', lost: '损失', survive: '幸存',
+    selected: (n) => `已选 ${n} 个`, selTip: '点击以选中此框内全部单位',
+    recTitle: '姿态推荐', recFor: '为谁推荐', recHolder: '领土由谁控制', recOrder: '姿态顺序', orderSet: '对方已选定', orderFirst: '我先选（对方看后应对）', theirReply: '对方的最佳应对', defaultTag: '默认：相对对方损失最小', sameAsDefault: '与默认卡片的配置相同', onBoard: '已应用：双方配置都已在棋盘上', onBoardMine: '已应用：该配置已在棋盘上', worstCase: '对方做出最佳应对时的最坏结果', recGo: '寻找最佳配置', recBusy: '搜索中',
+    mExch: '成本交换（敌方损失 − 己方损失）', mLead: '单位领先（己方 − 对方）',
+    predTitle: '对方应对：如果对方……', predHint: '对方追求各种目标时会选的最佳应对，以及此时你的结果。', predFigure: '每行的数字是你在该卡片目标下的结果。',
+    objE: { control: '夺取领土', hold: '守住领土', balanced: '最佳成本交换比', unitDiff: '最大单位领先' },
+    recNone: '没有可优化的内容：请添加拥有两种姿态的单位。', recCur: '当前配置', recApply: '应用',
+    recSame: '与当前配置相同',
+    obj: { control: '夺取领土的概率最高', hold: '守住领土的概率最高（己方据守该领土时）', balanced: '最佳成本交换比（敌方损失 − 己方损失）',
+           unitDiff: '剩余陆 / 海军单位的领先优势最大（己方 − 对方）' },
+    mControl: '夺取控制权的概率', mHold: '守住控制权的概率', mKeptOwn: '己方剩余的陆 / 海军单位', mKeptEnemy: '敌方剩余的陆 / 海军单位', yellowTip: '黄色（其他）资源',
+    recNoteFirst: '你先选姿态、对方看到后再选，因此每种配置都按对方的最佳应对来评估：即对方能对该卡片目标造成最大损害的配置。这里的数字是对你最不利的情况（受损单位视为幸存）。第一张卡片“最佳成本交换比”（敌方损失远大于己方）为默认方案；每张卡片各自按其自身目标的最坏应对计算。不使用你当前的配置。搜索完成后会自动把默认卡片（你的配置和对方同样追求成本交换时的最佳应对）放到棋盘上并重新计算。每个部分都有自己的“应用”按钮：点击后会放上你的配置和该部分对应的对方配置并重新计算，方便你仔细查看任意一种情况。固定姿态：轰炸机始终使用姿态 2（姿态 1 是战略突袭，本计算器未建模）。如果对方没有空军单位，或没有陆 / 海军单位，那么只能打到它们的骰子毫无作用，因此单位会直接采用在有效骰子和生命值上不逊于另一种姿态的那一个，不再参与搜索。',
+    mEnemyCost: '敌方损失的生产成本', mOwnCost: '己方损失的生产成本', unitsWord: '个单位',
+    recNote: '假设对方保持其当前姿态。“控制权”（仅陆战）指己方仍有陆军单位而敌方没有；空军单位既不能夺取也不能守卫领土。一轮战斗后该概率常为 0%，此时以敌方陆军被摧毁的程度作为次要依据。海战不会夺取任何东西，因此不提供该目标。“剩余的陆 / 海军单位”按生产成本比较双方仍存活的非空军单位。生产成本以黄色（“其他”）资源表示：按规则书的交易转换率（2 石油 = 3 钢铁 = 5 其他），1 石油折合 2.5、1 钢铁折合约 1.67，因此损失一艘战列舰的分量远大于损失一个步兵。剩余的陆 / 海军单位按单位数量统计（不计空军单位）。受损单位视为幸存。固定姿态：轰炸机始终使用姿态 2（姿态 1 是战略突袭，本计算器未建模）。如果对方没有空军单位，或没有陆 / 海军单位，那么只能打到它们的骰子毫无作用，因此单位会直接采用在有效骰子和生命值上不逊于另一种姿态的那一个，不再参与搜索。',
+    stanceShort: '姿',
+    rulesTitle: '本计算器采用的规则', rulesHtml: `
+<h4>1. 骰子</h4>
+<ul>
+<li>战斗使用 12 面骰，面数分布：白 1、黑 1、红 1、绿 2、蓝 3、黄 4。</li>
+<li>骰面颜色与敌方某单位种类的颜色相同时，视为命中该种类（颜色见下表）。<b>黑色</b>为万能面，可命中任何符合条件的敌方单位。<b>白色</b>只能命中已受损（仅剩最后一次命中）的单位，且不能命中受损的潜水艇。</li>
+<li><b>目标选择</b>：有多种选择时，首先选择能让本批<b>白色骰面用得最多</b>的方案（让某个单位受损，白色骰面才有目标）；其次在空战阶段，优先击落<b>同时参加陆战/海战阶段的飞机</b>，因为击落它们会减少后续阶段的骰子数；最后选择每点生命值对应火力最高的单位。</li>
+</ul>
+
+<h4>2. 战斗阶段</h4>
+<ul>
+<li><b>空战阶段</b>（仅当有空军单位参战）：战斗机、轰炸机以及拥有防空骰子的单位投骰；<b>只有空军单位会被命中</b>。</li>
+<li><b>陆 / 海战阶段</b>：所有陆军 / 海军单位及幸存的空军单位（包括受损的）投骰；<b>只有陆军 / 海军单位会被命中</b>。在空战阶段被摧毁的空军单位不会投骰。</li>
+<li>一次计算只代表一轮战斗（两个阶段各一次）。计算器不会模拟之后的交战轮次。</li>
+</ul>
+
+<h4>3. 骰子数量</h4>
+<ul>
+<li>每方骰子数 = 各单位数量 × 其所处姿态在当前阶段的骰子值，再求和。空战阶段使用姿态中的第一个数字（对空），陆 / 海战阶段使用第二个数字（对陆 / 海）。</li>
+<li>骰子总数在投掷<b>前</b>就已确定，按阶段开始时仍存活的单位计算，上限为 <b>30</b> 颗。</li>
+<li><b>港口优势</b>（海战，勾选后生效）：在陆 / 海战阶段，仍拥有海军单位的一方额外 +2 颗骰子（仍受 30 颗上限限制）。</li>
+</ul>
+
+<h4>4. 投骰与命中顺序</h4>
+<ul>
+<li>骰子每 10 颗为一批（最后一批可能少于 10 颗）。每批投完后先分配命中，再投下一批。命中不会增加骰子；先前已被摧毁的单位，其已计入的骰子仍会投出。</li>
+<li>同一批骰子中，命中的结算顺序为：黄、蓝、绿、红、黑、白。</li>
+<li>谁先投骰不会改变概率，因为双方的骰子数量和命中都不取决于对方的投掷结果，所以计算器没有这个设置。</li>
+</ul>
+
+<h4>5. 生命值与受损</h4>
+<ul>
+<li>炮兵、战斗机、轰炸机、巡洋舰和潜水艇被命中 <b>2 次</b>摧毁；航空母舰和战列舰在任一姿态下都需命中 <b>3 次</b>。</li>
+<li><b>步兵的生命值取决于姿态</b>：姿态 1（– / 1）需命中 <b>2 次</b>，姿态 2（– / 2）只需命中 <b>1 次</b>。姿态 2 的步兵没有受损状态，同色骰面（或黑色骰面）命中一次即被摧毁，且<b>白色骰面永远无法命中它</b>。</li>
+<li><b>装甲的生命值取决于姿态</b>：姿态 1（1 / 2 那一行，带有额外的轻度受损格）需命中 <b>3 次</b>，姿态 2（– / 4 那一行）只需命中 <b>2 次</b>。生命值由单位在战斗开始时所处的姿态决定。</li>
+<li>2 次命中的单位被命中一次后即<b>受损</b>。3 次命中的单位被命中一次为<b>轻度受损</b>（无需维修），两次后为<b>受损</b>。</li>
+<li>同一行（同种单位、同一姿态）中，已受损的单位必须先于未受损的单位被命中。</li>
+<li><b>潜水艇</b>：受损但仍存活的潜水艇会在敌方每批投骰结算后下潜逃离，避免后续伤害（白色骰面也无法命中它）。</li>
+</ul>
+
+<h4>6. 兵种优势</h4>
+<ul>
+<li>仅在陆 / 海战阶段，拥有更多<b>不同陆军 / 海军单位种类</b>的一方获得兵种优势（空军单位不计入；同一种类的不同姿态只算一种）。</li>
+<li>对方在整个阶段中的<b>黑色和白色骰面视为未命中</b>。该判定在阶段开始时只做一次。</li>
+</ul>
+
+<h4>7. 命中如何分配（假设）</h4>
+<p>规则允许投骰方自行选择目标。计算器假设投骰方总是把每次命中用在最能削弱敌方当前阶段火力之处（受损单位更接近被摧毁，因此价值更高），并在同一行内优先攻击受损单位。</p>
+
+<h4>8. 结果的含义</h4>
+<ul>
+<li><b>损失</b>：被摧毁的单位。<b>幸存</b>：仍存活的单位。<b>受损单位在所有结果和推荐中都视为幸存</b>：不计算维修所需的资源，也不计算港口优势的免费维修。</li>
+<li>结果条（陆战）：<b>夺取领土</b>＝战斗后只有该方仍有陆军单位而对方没有（空军单位既不能夺取也不能守卫领土）；若双方都有或都没有陆军单位，则<b>控制权不变</b>。海战：不会夺取任何东西，所以结果条显示<b>全歼</b>＝该方消灭了全部敌方单位且自己仍有单位、<b>双方均有幸存</b>或<b>同归于尽</b>。第二个条形图显示双方谁在战斗后<b>剩余的陆 / 海军单位更多</b>，按仍存活的非空军单位数量比较（不计空军单位）；“相同”也包括双方都没有剩余单位的战斗。所有数字都是大量随机模拟战斗的平均值（“模拟次数”设置）。</li>
+</ul>
+
+<h4>9. 推荐功能</h4>
+<ul>
+<li>推荐功能会为所选一方尝试各单位种类在不同姿态之间的分配，同时保持另一方为你设置的样子。各种配置在完全相同的随机骰子上比较，最优的几个候选再用 6,000 次模拟复测。</li>
+<li>提供的目标：<b>夺取领土的概率最高</b>（仅陆战，规则书第 19 页：己方仍有陆军单位而敌方没有；空军单位对双方都不计入，海战根本没有控制权；概率相同时，以敌方陆军部队被摧毁的程度作为次要依据）。<b>守住领土的概率最高</b>适用于己方已据守该领土的情况（“领土由谁控制”默认为你所推荐的一方；己方控制时只提供“守住”，敌方控制时只提供“夺取”）：使敌方<i>不能</i>夺取领土的概率最大（即 100% 减去敌方仍有陆军单位而己方没有的概率）；概率相同时，以己方陆军损失最小作为次要依据。<b>最佳成本交换比</b>＝你消灭的敌方单位的生产成本减去你损失的单位的生产成本。<b>剩余陆 / 海军单位的领先优势最大</b>＝战斗后你仍存活的非空军单位数量，减去对方仍存活的非空军单位数量，差值越大越好（双方都不计空军单位）。</li>
+<li>生产成本以<b>黄色（“其他”）资源</b>表示：单位价格中的点数按规则书的交易转换率（2 石油 = 3 钢铁 = 5 其他）折算，即 1 石油折合 2.5 个黄色资源，1 钢铁折合约 1.67 个，因此战列舰的分量远大于步兵。受损单位视为幸存。</li>
+<li>单位较多时采用爬山式搜索，能找到很好的配置，但不保证找到绝对最优解。</li>
+</ul>
+
+<h4>10. 未模拟的内容</h4>
+<ul>
+<li>巡洋舰护卫姿态、战略轰炸与护航舰队突袭（轰炸机的战略姿态在此只会投出对空骰子）、空置领土的常备部队、可选的批次上限规则，以及快速战斗变体。</li>
+<li>同一场战斗中多个盟国（请视为一方）、舰载战斗机指示物的特殊处理、运兵船，以及交战区域的后续轮次。</li>
+</ul>
+<p class="cap">来源：2025 年中文规则书的战斗章节、战斗面板，以及作战指令表上的生产表（第 22 页）。生产成本＝石油、钢铁、其他三种资源的点数，按交易转换率折算为黄色资源（2 石油 = 3 钢铁 = 5 其他）。下方的单位表由计算器自身数据生成。</p>
+`,
+    tHead: ['单位', '颜色', '生产成本：石油 · 钢铁 · 其他 = 折合黄色资源', '姿态 1：骰子（对空 / 对陆海）· 摧毁所需命中', '姿态 2'], hitsWord: (n) => `${n} 次命中`,
+    tLand: '陆战', tSea: '海战',
+    colors: { Y: '黄', B: '蓝', G: '绿', R: '红' },
+    share: '分享结果', shareCopied: '链接已复制！', shareManual: '请复制下方链接',
+    shareHint: '任何人打开此链接，都会看到相同的配置和相同的结果。',
+    addUnits: '请先添加单位。', simulating: '模拟中…',
+    n1: '先用 − / + 设置每种单位的总数。<b>点击棋子进行选择</b>（点击姿态框标题可选中框内全部），然后<b>拖动</b>任一已选棋子，或点击目标姿态框，即可一次移动所有已选棋子。每个姿态显示的骰子数格式为 <b>对空 / 对陆（海）</b>。',
+    n2: '骰子总数在投掷前确定（上限 30 颗），每批 10 颗，每批投完后分配命中。黑色为万能面，白色只能命中受损单位（受损的潜水艇除外）。',
+    n3: '兵种优势（陆 / 海战阶段）与港口优势（海战 +2 颗骰子）会自动计算；请为拥有港口优势的一方勾选“港口优势”。',
+    n4: '命中分配假设攻击方会把命中用在最能削弱对方火力之处，并优先攻击受损单位。未模拟：巡洋舰护卫姿态、战略轰炸突袭、护航舰队突袭、常备部队、可选的批次上限规则。',
+    units: { infantry:'步兵', artillery:'炮兵', armor:'装甲', fighter:'战斗机', bomber:'轰炸机',
+             submarine:'潜水艇', cruiser:'巡洋舰', carrier:'航空母舰', battleship:'战列舰' },
+  },
+};
+
+let lang = (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+try { const saved = localStorage.getItem('wr-lang'); if (saved === 'en' || saved === 'zh') lang = saved; } catch (e) {}
+const T = () => I18N[lang];
+const SHIPS = new Set(['submarine', 'cruiser', 'carrier', 'battleship']);
+const iconSrc = (t) => `icons/${t}.png`;
+const icon = (t, cls, extra = '') => `<img class="${cls}${SHIPS.has(t) ? ' ship' : ''}" src="${iconSrc(t)}" alt="${T().units[t]}" ${extra}>`;
+const stanceLabel = (s) => `${s.air || '–'} / ${s.ls || '–'}`;
+let lastResult = null;
+let holderAuto = true;                                // "Land held by" follows the advised side until the user picks one
+
+function applyStatic() {
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.title = T().title;
+  document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = T()[el.dataset.i18n]; });
+  document.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = T()[el.dataset.i18nHtml]; });
+  $('lang').textContent = T().langBtn;
+  fillRulesTables();
+}
+
+function fillRulesTables() {
+  const HEX = { Y: '#e8c93a', B: '#4a8fe0', G: '#4caf62', R: '#e0524c' };
+  let h = '';
+  for (const mode of ['land', 'sea']) {
+    h += `<h4 style="margin:14px 0 2px;font-size:14px;color:var(--accent)">${mode === 'land' ? T().tLand : T().tSea}</h4><table><tr>` +
+         T().tHead.map((x) => `<th>${x}</th>`).join('') + '</tr>';
+    for (const [type, stances] of Object.entries(W.STANCES[mode])) {
+      const d = W.TYPES[type];
+      h += `<tr><td>${icon(type, 'uico')}${T().units[type]}</td>` +
+           `<td><span class="swatch" style="background:${HEX[d.color]}"></span>${T().colors[d.color]}</td><td>${d.cost.join(' · ')} = ${W.costOf(type).toFixed(1)}</td>` +
+           [0, 1].map((i) => `<td>${stances[i] ? stanceLabel(stances[i]) + (stances[i].note ? ' (' + T().raid + ')' : '') + ' · ' + T().hitsWord(stances[i].hp || d.hp) : '—'}</td>`).join('') + '</tr>';
+    }
+    h += '</table>';
+  }
+  $('rulesTables').innerHTML = h;
+}
+
+// ---- state: counts[mode][side][type] = [units in stance 1, units in stance 2] ----
+const state = { land: [{}, {}], sea: [{}, {}], port: [false, false] };
+const getCounts = (mode, s, t) => (state[mode][s][t] = state[mode][s][t] || [0, 0]);
+const MAX_UNITS = 40;
+
+// ---- remember everything across page refreshes (this browser only) ----
+// Bump RULES_VERSION whenever the rules/engine change, so numbers saved under old rules are discarded.
+const RULES_VERSION = 10, SAVE_KEY = 'wr-state';
+function saveState() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      v: RULES_VERSION, mode: $('mode').value, runs: $('runs').value, side: $('recSide').value, holder: $('recHolder').value, holderAuto, order: $('recOrder').value,
+      state: { land: state.land, sea: state.sea, port: state.port }, result: lastResult, rec: lastRec,
+    }));
+  } catch (e) { /* storage unavailable: the page just works without remembering */ }
+}
+function restoreState() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (!d || d.v !== RULES_VERSION || !W.STANCES[d.mode]) return;
+    for (const m of ['land', 'sea']) {
+      state[m] = [0, 1].map((sd) => {
+        const o = {};
+        for (const t of Object.keys(W.STANCES[m])) {
+          const c = (d.state[m][sd] || {})[t];
+          if (!Array.isArray(c)) continue;
+          o[t] = [0, 1].map((i) => Math.min(MAX_UNITS, Math.max(0, c[i] | 0)));
+          if (W.STANCES[m][t].length === 1) o[t][1] = 0;
+        }
+        return o;
+      });
+    }
+    state.port = [!!(d.state.port && d.state.port[0]), !!(d.state.port && d.state.port[1])];
+    $('mode').value = d.mode;
+    if (![...$('runs').options].some((o) => o.value === String(d.runs))) $('runs').add(new Option(String(d.runs), String(d.runs)));
+    $('runs').value = String(d.runs);
+    if (d.side === '0' || d.side === '1') $('recSide').value = d.side;
+    holderAuto = d.holderAuto !== false;               // older saves had no flag: follow the advised side
+    if (!holderAuto && (d.holder === '0' || d.holder === '1')) $('recHolder').value = d.holder;
+    if (d.order === 'first') $('recOrder').value = d.order;
+    if (d.result && d.result.cfg && d.result.cfg.mode === d.mode && d.result.out && d.result.out.p && d.result.out.dist) lastResult = d.result;
+    const rs = d.rec && d.rec.res;                  // a saved recommendation is only reused if it has every field the page now shows
+    const recOk = rs && d.rec.mode === d.mode && (rs.order === 'first' ? rs.options.every((o) => o.reply && o.predictions) && !rs.options.some((o) => o.current) : rs.current && rs.current.metrics.hold !== undefined);
+    if (d.rec && (d.rec.none || recOk)) lastRec = d.rec;
+  } catch (e) { /* corrupted save: start fresh */ }
+}
+
+function setTotal(mode, s, t, total) {
+  const c = getCounts(mode, s, t);
+  total = Math.min(MAX_UNITS, Math.max(0, total | 0));
+  let diff = total - (c[0] + c[1]);
+  if (diff > 0) c[0] += diff;                       // new units start in stance 1
+  while (diff < 0) { const i = c[1] > 0 ? 1 : 0; if (c[i] > 0) { c[i]--; diff++; } else break; }
+}
+function moveToken(mode, s, t, from, to) {
+  const c = getCounts(mode, s, t);
+  if (from === to || c[from] <= 0) return;
+  c[from]--; c[to]++;
+}
+
+// Anything on screen computed from the setup (calculation, recommendation) goes stale the moment the
+// setup really changes, so it is removed instead of being left to mislead.
+let calcRun = 0;
+function invalidateResults() {
+  recRun++; calcRun++;                              // also cancels a search / calculation that is still running
+  lastResult = null; lastRec = null;
+  $('results').innerHTML = ''; $('recOut').innerHTML = ''; $('recProg').textContent = '';
+  $('recGo').disabled = false; $('go').disabled = false;
+  // A stale share code in the address bar would undo these edits on the next refresh.
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  saveState();
+}
+function mutateSetup(fn) {                          // run fn; clear results only if the setup actually changed
+  const snap = () => JSON.stringify([state.land, state.sea, state.port]);
+  const totals = () => JSON.stringify([state.land, state.sea].map((m) => m.map((sd) => Object.fromEntries(Object.entries(sd).map(([t, c]) => [t, c[0] + c[1]])))));
+  const advisedSide = () => (lastRec && lastRec.res ? lastRec.res.side : null);
+  const enemyStances = () => (advisedSide() == null ? null : JSON.stringify(state[lastRec.mode][1 - advisedSide()]));
+  const before = snap(), tBefore = totals(), eBefore = enemyStances(), pBefore = JSON.stringify(state.port); fn();
+  if (snap() === before) return;
+  // Only stances moved (no unit added or removed, no port change): the calculation is stale, but the recommendation
+  // still holds, so it stays and only its Apply / applied states are refreshed. In "opponent already set" mode it is
+  // computed against the opponent's stances, so it is dropped if those moved; also dropped while a search is running.
+  const stanceOnly = totals() === tBefore && JSON.stringify(state.port) === pBefore;
+  const keepRec = stanceOnly && lastRec && !lastRec.none && $('recGo').disabled === false
+    && (lastRec.res.order === 'first' || enemyStances() === eBefore);
+  if (!keepRec) { invalidateResults(); return; }
+  calcRun++; lastResult = null; $('results').innerHTML = ''; $('go').disabled = false;
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  renderRec();
+}
+
+// Selection is scoped to one side + unit type. n[i] = how many tokens in stance i are selected
+// (tokens of a type are interchangeable, so a count is enough).
+let sel = null; // { s, t, n: [a, b] }
+const selTotal = () => (sel ? sel.n[0] + sel.n[1] : 0);
+const inSel = (s, t) => sel && sel.s === s && sel.t === t;
+
+function moveSelected(mode, toI) {
+  if (!sel) return;
+  const c = getCounts(mode, sel.s, sel.t);
+  for (let i = 0; i < 2; i++) {
+    if (i === toI) continue;
+    const m = Math.min(sel.n[i], c[i]); c[i] -= m; c[toI] += m;
+  }
+  sel = null;
+}
+
+function buildTables() {
+  const mode = $('mode').value;
+  if (sel) {                                   // keep the selection valid after any change
+    const c = getCounts(mode, sel.s, sel.t);
+    sel.n = [Math.min(sel.n[0], c[0]), Math.min(sel.n[1] || 0, c[1] || 0)];
+    if (!selTotal()) sel = null;
+  }
+  for (let s = 0; s < 2; s++) {
+    let h = '';
+    for (const [type, stances] of Object.entries(W.STANCES[mode])) {
+      const c = getCounts(mode, s, type), name = T().units[type], mine = inSel(s, type);
+      h += `<div class="unit"><div class="uhead"><span>${icon(type, 'uico')}${name}` +
+           `${mine ? `<span class="selhint">${T().selected(selTotal())}</span>` : ''}</span>` +
+           `<div class="step"><button type="button" class="sb" data-d="-1" data-s="${s}" data-t="${type}" aria-label="−">−</button>` +
+           `<input type="number" min="0" max="${MAX_UNITS}" value="${c[0] + c[1]}" inputmode="numeric" data-total data-s="${s}" data-t="${type}">` +
+           `<button type="button" class="sb" data-d="1" data-s="${s}" data-t="${type}" aria-label="+">+</button></div></div>` +
+           `<div class="zones${stances.length === 1 ? ' one' : ''}">`;
+      stances.forEach((st, i) => {
+        const target = mine && stances.length > 1;
+        h += `<div class="zone${target ? ' target' : ''}" data-s="${s}" data-t="${type}" data-i="${i}">` +
+             `<span class="zl" title="${T().selTip}">${i ? T().stance2 : T().stance1} · ${stanceLabel(st)}${st.note ? ' (' + T().raid + ')' : ''}</span><div class="toks">`;
+        for (let k = 0; k < c[i]; k++) {
+          const on = mine && k < sel.n[i];
+          h += icon(type, 'tok' + (on ? ' sel' : ''), `draggable="true" data-s="${s}" data-t="${type}" data-i="${i}" data-k="${k}" title="${name}"`);
+        }
+        h += '</div></div>';
+      });
+      h += '</div></div>';
+    }
+    $('t' + s).innerHTML = h;
+    $('portWrap' + s).innerHTML = mode === 'sea'
+      ? `<label><input type="checkbox" id="port${s}" ${state.port[s] ? 'checked' : ''}> ${T().port}</label>` : '';
+    const pc = $('port' + s);
+    if (pc) pc.addEventListener('change', () => { mutateSetup(() => { state.port[s] = pc.checked; }); updateDice(); });
+  }
+  updateDice();
+  saveState();
+}
+
+let dragInfo = null; // { s, t, i, all }
+let suppressClick = false;
+for (const id of ['t0', 't1']) {
+  const root = $(id);
+  root.addEventListener('click', (e) => {
+    if (suppressClick) return;
+    const mode = $('mode').value;
+    const b = e.target.closest('.sb');
+    if (b) {                                              // − / +
+      sel = null;
+      const c = getCounts(mode, +b.dataset.s, b.dataset.t);
+      mutateSetup(() => setTotal(mode, +b.dataset.s, b.dataset.t, c[0] + c[1] + +b.dataset.d));
+      buildTables(); return;
+    }
+    const tok = e.target.closest('.tok');
+    if (tok) {                                            // click a token: select / deselect it
+      const s = +tok.dataset.s, t = tok.dataset.t, i = +tok.dataset.i, k = +tok.dataset.k;
+      if (!inSel(s, t)) sel = { s, t, n: [0, 0] };
+      sel.n[i] += k < sel.n[i] ? -1 : 1;                  // selected tokens are drawn first in each box
+      sel.n[i] = Math.max(0, sel.n[i]);
+      if (!selTotal()) sel = null;
+      buildTables(); return;
+    }
+    const zl = e.target.closest('.zl');
+    if (zl) {                                             // click a box title: select all in that box
+      const z = zl.closest('.zone'), s = +z.dataset.s, t = z.dataset.t, i = +z.dataset.i;
+      const n = getCounts(mode, s, t)[i];
+      if (!inSel(s, t)) sel = { s, t, n: [0, 0] };
+      sel.n[i] = sel.n[i] === n ? 0 : n;
+      if (!selTotal()) sel = null;
+      buildTables(); return;
+    }
+    const z = e.target.closest('.zone');
+    if (z && inSel(+z.dataset.s, z.dataset.t)) {          // click a box while tokens are selected: move them there
+      mutateSetup(() => moveSelected(mode, +z.dataset.i)); buildTables();
+    }
+  });
+  root.addEventListener('change', (e) => {
+    const el = e.target.closest('input[data-total]'); if (!el) return;
+    sel = null;
+    mutateSetup(() => setTotal($('mode').value, +el.dataset.s, el.dataset.t, +el.value));
+    buildTables();
+  });
+  root.addEventListener('dragstart', (e) => {
+    const tok = e.target.closest('.tok'); if (!tok) return;
+    const s = +tok.dataset.s, t = tok.dataset.t, i = +tok.dataset.i, k = +tok.dataset.k;
+    const all = inSel(s, t) && k < sel.n[i];              // dragging a selected token moves the whole selection
+    if (!all) sel = null;
+    dragInfo = { s, t, i, all };
+    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'token');
+    setTimeout(() => {
+      if (all) root.querySelectorAll('.tok.sel').forEach((n) => n.classList.add('drag')); else tok.classList.add('drag');
+    }, 0);
+  });
+  root.addEventListener('dragend', () => { dragInfo = null; root.querySelectorAll('.over,.drag').forEach((n) => n.classList.remove('over', 'drag')); });
+  root.addEventListener('dragover', (e) => {
+    const z = e.target.closest('.zone');
+    if (!z || !dragInfo || +z.dataset.s !== dragInfo.s || z.dataset.t !== dragInfo.t) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    root.querySelectorAll('.over').forEach((n) => n !== z && n.classList.remove('over')); z.classList.add('over');
+  });
+  root.addEventListener('dragleave', (e) => { const z = e.target.closest('.zone'); if (z && !z.contains(e.relatedTarget)) z.classList.remove('over'); });
+  root.addEventListener('drop', (e) => {
+    const z = e.target.closest('.zone');
+    if (!z || !dragInfo || +z.dataset.s !== dragInfo.s || z.dataset.t !== dragInfo.t) return;
+    e.preventDefault();
+    const mode = $('mode').value, to = +z.dataset.i;
+    mutateSetup(() => { if (dragInfo.all) moveSelected(mode, to); else moveToken(mode, dragInfo.s, dragInfo.t, dragInfo.i, to); });
+    dragInfo = null; buildTables();
+  });
+
+  // Touch screens do not fire HTML5 drag events, so touch/pen drags are handled with pointer events.
+  let tp = null;   // { id, x, y, tok, ghost, active, info }
+  const zoneAt = (x, y) => { const el = document.elementFromPoint(x, y); const z = el && el.closest('.zone');
+    return z && root.contains(z) && tp && +z.dataset.s === tp.info.s && z.dataset.t === tp.info.t ? z : null; };
+  const endTouch = () => {
+    if (tp && tp.ghost) tp.ghost.remove();
+    root.querySelectorAll('.over,.drag').forEach((n) => n.classList.remove('over', 'drag'));
+    tp = null;
+  };
+  root.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse') return;
+    const tok = e.target.closest('.tok'); if (!tok) return;
+    tp = { id: e.pointerId, x: e.clientX, y: e.clientY, tok, ghost: null, active: false,
+           info: { s: +tok.dataset.s, t: tok.dataset.t, i: +tok.dataset.i, k: +tok.dataset.k } };
+  });
+  root.addEventListener('pointermove', (e) => {
+    if (!tp || e.pointerId !== tp.id) return;
+    if (!tp.active) {
+      if (Math.hypot(e.clientX - tp.x, e.clientY - tp.y) < 8) return;
+      tp.active = true;
+      const { s, t, i, k } = tp.info;
+      const all = inSel(s, t) && k < sel.n[i];
+      if (!all) sel = null;
+      tp.info.all = all;
+      if (all) root.querySelectorAll('.tok.sel').forEach((n) => n.classList.add('drag')); else tp.tok.classList.add('drag');
+      const g = tp.tok.cloneNode(true);
+      g.className = 'tok'; g.style.cssText = 'position:fixed;z-index:1000;pointer-events:none;opacity:.9;transform:translate(-50%,-50%) scale(1.3)';
+      document.body.appendChild(g); tp.ghost = g;
+    }
+    e.preventDefault();
+    tp.ghost.style.left = e.clientX + 'px'; tp.ghost.style.top = e.clientY + 'px';
+    const z = zoneAt(e.clientX, e.clientY);
+    root.querySelectorAll('.over').forEach((n) => n !== z && n.classList.remove('over'));
+    if (z) z.classList.add('over');
+  });
+  root.addEventListener('pointerup', (e) => {
+    if (!tp || e.pointerId !== tp.id) return;
+    if (tp.active) {
+      const z = zoneAt(e.clientX, e.clientY), info = tp.info;
+      suppressClick = true; setTimeout(() => { suppressClick = false; }, 400);
+      endTouch();
+      if (z) {
+        const mode = $('mode').value, to = +z.dataset.i;
+        mutateSetup(() => { if (info.all) moveSelected(mode, to); else moveToken(mode, info.s, info.t, info.i, to); });
+      }
+      buildTables();
+    } else tp = null;
+  });
+  root.addEventListener('pointercancel', () => { if (tp && tp.active) buildTables(); endTouch(); });
+  root.addEventListener('contextmenu', (e) => { if (e.target.closest('.tok')) e.preventDefault(); });
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sel) { sel = null; buildTables(); } });
+
+function readConfig() {
+  const mode = $('mode').value;
+  const sides = [0, 1].map((s) => {
+    const units = {};
+    for (const t of Object.keys(W.STANCES[mode])) units[t] = getCounts(mode, s, t).slice();
+    return { units, port: mode === 'sea' && state.port[s] };
+  });
+  return { mode, first: 0, fightToEnd: false, sides };
+}
+
+function updateDice() {
+  const cfg = readConfig();
+  for (let s = 0; s < 2; s++) {
+    const u = W.buildUnits(cfg.mode, cfg.sides[s]);
+    const port = cfg.mode === 'sea' && cfg.sides[s].port;
+    $('dice' + s).textContent = T().dice(W.diceCount(u, 'air', false), W.diceCount(u, 'ls', port), cfg.mode);
+  }
+}
+
+const pct = (x) => (x * 100).toFixed(1) + '%';
+
+function render(cfg, out) {
+  saveState();
+  const t = T(), p = out.p;
+  // Land battle: territory changes hands only if exactly one side keeps a land unit (air units can't capture).
+  // Sea battle: nothing is captured, so show who wiped out whom.
+  const segs = cfg.mode === 'land'
+    ? [[t.cap0, out.control[0], 'var(--axis)'], [t.capNone, 1 - out.control[0] - out.control[1], '#4a5260'], [t.cap1, out.control[1], 'var(--allied)']]
+    : [[t.seg0, p.side0Wins, 'var(--axis)'], [t.segBoth, p.stalemate, '#4a5260'],
+       [t.segMutual, p.mutual, '#666'], [t.seg1, p.side1Wins, 'var(--allied)']];
+  const bar = (list) => '<div class="odds">' + list.filter((x) => x[1] > 0).map((x) =>
+      `<div style="width:${x[1] * 100}%;background:${x[2]}">${x[1] > 0.06 ? pct(x[1]) : ''}</div>`).join('') + '</div>' +
+    '<div class="legend">' + list.map((x) => `<span><span class="dot" style="background:${x[2]}"></span>${x[0]} ${pct(x[1])}</span>`).join('') + '</div>';
+  let h = `<div class="res"><h3>${t.outcome(out.runs.toLocaleString())}</h3>${bar(segs)}</div>`;
+  // Second bar: which side ends the battle with more land/sea units (non-air), by production value.
+  h += `<div class="res"><h3>${t.leadTitle}</h3>${bar([[t.lead0, out.lead.side0, 'var(--axis)'], [t.leadTie, out.lead.tie, '#4a5260'], [t.lead1, out.lead.side1, 'var(--allied)']])}</div>`;
+
+  // Units left per side, for k = 1..starting count: P(at least k) as a bar and a percentage.
+  const distRows = (d) => {
+    let cum = 0; const atLeast = [];
+    for (let k = d.length - 1; k >= 0; k--) { cum += d[k]; atLeast[k] = Math.min(cum, 1); }
+    let rows = '';
+    for (let k = 1; k < d.length; k++) {               // k = 0 is always 100% / 0%, so it is skipped
+      rows += `<tr><td>${k}</td><td class="dbar"><div style="width:${atLeast[k] * 100}%"></div></td><td>${pct(atLeast[k])}</td></tr>`;
+    }
+    return rows;
+  };
+  h += '<div class="sides">';
+  [t.axis, t.allies].forEach((name, s) => {
+    h += `<div class="res"><h3>${t.atLeastTitle(name)}</h3>`;
+    [[t.atLeastLS(cfg.mode), out.dist[s].ls], [t.atLeastAir, out.dist[s].air]].forEach(([label, d]) => {
+      if (d.length < 2) return;                       // side started with no units of this kind
+      h += `<table class="dist"><tr><th>${label}</th><th></th><th>${t.atLeast}</th></tr>${distRows(d)}</table>`;
+    });
+    h += '</div>';
+  });
+  h += '</div>';
+
+  h += '<div class="sides">';
+  [t.axis, t.allies].forEach((name, s) => {
+    const types = Object.keys(W.STANCES[cfg.mode]);
+    const init = {};
+    for (const [ty, c] of Object.entries(cfg.sides[s].units)) init[ty] = (c[0] || 0) + (c[1] || 0);
+    h += `<div class="res"><h3>${t.expected(name)}</h3><table><tr><th>${t.unit}</th><th>${t.start}</th><th>${t.lost}</th><th>${t.survive}</th></tr>`;
+    for (const ty of types) {
+      if (!init[ty]) continue;
+      h += `<tr><td>${icon(ty, 'uico')}${t.units[ty]}</td><td>${init[ty]}</td>` +
+           `<td>${(out.lost[s][ty] || 0).toFixed(2)}</td><td>${(out.survivors[s][ty] || 0).toFixed(2)}</td></tr>`;
+    }
+    h += '</table></div>';
+  });
+  h += '</div>';
+  h += `<div class="res"><div class="sharebar"><button type="button" id="shareBtn">${T().share}</button>` +
+       `<input type="text" id="shareLink" readonly aria-label="${T().share}"><span class="msg" id="shareMsg"></span></div>` +
+       `<div class="dice">${T().shareHint}</div></div>`;
+  $('results').innerHTML = h;
+  attachShare(cfg, out);
+}
+
+function runCalc(cfg, runs) {
+  $('go').disabled = true; $('results').innerHTML = `<div class="res">${T().simulating}</div>`;
+  const my = ++calcRun;
+  setTimeout(() => {
+    if (my !== calcRun) return;                     // the setup changed (or Reset) while we waited
+    lastResult = { cfg, out: W.simulate(cfg, runs) };
+    render(lastResult.cfg, lastResult.out); $('go').disabled = false;
+  }, 20);
+}
+function doCalculate() {
+  const cfg = readConfig();
+  const total = cfg.sides.reduce((n, s) => n + Object.values(s.units).flat().reduce((a, b) => a + b, 0), 0);
+  if (!total) { lastResult = null; $('results').innerHTML = `<div class="res">${T().addUnits}</div>`; return; }
+  cfg.seed = (Math.random() * 2147483647) | 0;       // fixed seed => a shared link reproduces these exact numbers
+  runCalc(cfg, +$('runs').value);
+}
+$('go').addEventListener('click', doCalculate);
+
+// ---------- share link ----------
+function encodeShare(cfg, runs) {
+  const u = cfg.sides.map((sd) => {
+    const o = {};
+    for (const [t, c] of Object.entries(sd.units)) if (c[0] || c[1]) o[t] = [c[0], c[1]];
+    return o;
+  });
+  const data = { v: 1, m: cfg.mode, r: runs, sd: cfg.seed, p: cfg.sides.map((sd) => (sd.port ? 1 : 0)), u, l: lang };
+  const b64 = btoa(JSON.stringify(data)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return location.href.split('#')[0] + '#s=' + b64;
+}
+function decodeShare(hash) {
+  const m = /^#s=([A-Za-z0-9_-]+)$/.exec(hash || ''); if (!m) return null;
+  try {
+    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+    const d = JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)));
+    if (d.v !== 1 || !W.STANCES[d.m] || !Array.isArray(d.u) || d.u.length !== 2) return null;
+    const units = [0, 1].map((s) => {
+      const o = {};
+      for (const [t, c] of Object.entries(d.u[s] || {})) {
+        if (!W.STANCES[d.m][t] || !Array.isArray(c)) continue;      // ignore anything unknown
+        o[t] = [0, 1].map((i) => Math.min(MAX_UNITS, Math.max(0, c[i] | 0)));
+        if (W.STANCES[d.m][t].length === 1) o[t][1] = 0;
+      }
+      return o;
+    });
+    return { mode: d.m, runs: Math.min(100000, Math.max(1000, d.r | 0)) || 20000, seed: d.sd | 0,
+             port: [!!(d.p && d.p[0]), !!(d.p && d.p[1])], units, lang: d.l === 'zh' ? 'zh' : 'en' };
+  } catch (e) { return null; }
+}
+function loadFromHash() {
+  const d = decodeShare(location.hash); if (!d) return;
+  lang = d.lang; applyStatic();
+  $('mode').value = d.mode;
+  if (![...$('runs').options].some((o) => +o.value === d.runs)) $('runs').add(new Option(String(d.runs), String(d.runs)));
+  $('runs').value = String(d.runs);
+  state[d.mode] = [d.units[0], d.units[1]]; state.port = d.port.slice();
+  sel = null; lastRec = null; renderRec(); buildTables();
+  runCalc({ ...readConfig(), seed: d.seed }, d.runs);
+}
+window.addEventListener('hashchange', loadFromHash);
+
+function attachShare(cfg, out) {
+  const btn = $('shareBtn'), inp = $('shareLink'), msg = $('shareMsg');
+  const url = encodeShare(cfg, out.runs);
+  inp.value = url;
+  inp.addEventListener('focus', () => inp.select());
+  btn.addEventListener('click', async () => {
+    try {
+      if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) { await navigator.share({ title: T().title, url }); return; }
+      await navigator.clipboard.writeText(url);
+      msg.textContent = T().shareCopied;
+    } catch (e) { inp.focus(); inp.select(); msg.textContent = T().shareManual; }
+    setTimeout(() => { msg.textContent = ''; }, 3500);
+  });
+}
+
+$('mode').addEventListener('change', () => { invalidateResults(); sel = null; buildTables(); $('results').innerHTML = ''; });
+
+$('lang').addEventListener('click', () => {
+  lang = lang === 'en' ? 'zh' : 'en';
+  try { localStorage.setItem('wr-lang', lang); } catch (e) {}
+  applyStatic(); buildTables(); renderRec();
+  if (lastResult) render(lastResult.cfg, lastResult.out);
+});
+
+// ---------- stance recommendation ----------
+let lastRec = null, recRun = 0;
+const f1 = (x) => x.toFixed(2);
+function layoutHtml(mode, units) {
+  let h = '<div class="lay">';
+  for (const [t, c] of Object.entries(units)) {
+    h += `<span>${icon(t, 'uico')}${T().units[t]}</span><span class="n">${T().stance1.replace(/\d/, '')}1 ×<b>${c[0]}</b> · ${T().stance1.replace(/\d/, '')}2 ×<b>${c[1]}</b></span>`;
+  }
+  return h + '</div>';
+}
+function statsHtml(m, cur, showControl, holderRel) { return goalStatsHtml(m, showControl, holderRel); }   // three goal figures, no diffs
+function renderRec() {
+  saveState();
+  const box = $('recOut');
+  if (!lastRec) { box.innerHTML = ''; return; }
+  if (lastRec.none) { box.innerHTML = `<p class="dice">${T().recNone}</p>`; return; }
+  const r = lastRec.res, mode = lastRec.mode;
+  const holderRel = lastRec.holder == null ? null : (lastRec.holder === r.side ? 'me' : 'enemy');
+  if (r.order === 'first') { renderRecFirst(r, mode, holderRel, box); return; }
+  renderRecSet(r, mode, holderRel, box);
+}
+// "Opponent already set" mode: one card per goal (cost exchange first, it is the default), no current-setup card.
+// Apply puts the layout on the board and recalculates; the cards themselves do not depend on the board, so they stay.
+function renderRecSet(r, mode, holderRel, box) {
+  const t = T();
+  const opts = [...r.options].sort((a, b) => (b.objective === 'balanced') - (a.objective === 'balanced'));
+  let h = '<div class="recs">';
+  opts.forEach((o, i) => {
+    h += `<div class="card"><h4>${t.obj[o.objective]}${o.objective === 'balanced' ? `<br><span class="dice">${t.defaultTag}</span>` : ''}</h4>${layoutHtml(mode, o.units)}` +
+         statsHtml(o.metrics, o.metrics, mode === 'land', holderRel) +
+         `<div class="applyrow">${onBoard(r.side, o.units) ? `<span class="dice">${t.onBoardMine}</span>`
+           : `<button type="button" data-set="${i}">${t.recApply}</button>`}</div></div>`;
+  });
+  h += `</div><div class="note">${t.recNote}</div>`;
+  box.innerHTML = h;
+  box.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => {
+    $('recSide').value = String(r.side);
+    const keep = lastRec;
+    putOnBoard(r.side, mode, opts[+b.dataset.set].units);
+    lastRec = keep; renderRec(); doCalculate();
+  }));
+}
+// Put a recommended layout on the board for one side (clears results that are now stale).
+function putOnBoard(side, mode, units) {
+  mutateSetup(() => { for (const [t, c] of Object.entries(units)) state[mode][side][t] = c.slice(); });
+  sel = null; buildTables();
+}
+// Is this layout already what the board shows for that side?
+function onBoard(side, units, other, otherUnits) {
+  if (other != null && !onBoard(other, otherUnits)) return false;
+  const mine = readConfig().sides[side].units;
+  return Object.entries(units).every(([t, c]) => (mine[t] || [0, 0])[0] === c[0] && (mine[t] || [0, 0])[1] === c[1]);
+}
+// "I set first" mode: the best-cost-exchange layout is the default card; every other goal's card shows its
+// difference from that default (plain subtraction of the numbers printed on the two cards).
+// The one figure that matters for a card's goal, from my side (the number the card's goal is trying to maximise).
+function goalFigure(obj, m) {
+  switch (obj) {
+    case 'control': return pct(m.control);
+    case 'hold': return pct(m.hold);
+    case 'unitDiff': { const d = m.keptUnits - m.enemyKeptUnits; return (d > 0 ? '+' : '') + f1(d) + ' ' + T().unitsWord; }
+    default: { const d = m.enemyCost - m.ownCost; return (d > 0 ? '+' : '') + f1(d) + `<span class="dot" style="background:#e8c93a;margin:0 0 0 4px" title="${T().yellowTip}"></span>`; }   // yellow-resource equivalents
+  }
+}
+// Only the three goal figures (chance of control / keeping it, cost exchange, unit lead) for the prediction rows.
+function goalStatsHtml(m, showControl, holderRel) {
+  const t = T(), row = (label, val) => `<span>${label}</span><b>${val}</b>`;
+  return '<div class="stats">' +
+    (showControl && holderRel !== 'me' ? row(t.mControl, pct(m.control)) : '') +
+    (showControl && holderRel !== 'enemy' ? row(t.mHold, pct(m.hold)) : '') +
+    row(t.mExch, goalFigure('balanced', m)) +
+    row(t.mLead, goalFigure('unitDiff', m)) + '</div>';
+}
+// One card's dropdown: the opponent's best reply when they simply counter my goal (default), then their best reply
+// under each of their own goals. Every section has its own Apply button that puts my layout and THAT reply on the board.
+function predictHtml(g, i, mode, r, holderRel) {
+  const t = T();
+  const figs = (m) => g.objs.map((ob) => goalFigure(ob, m)).join(' · ');     // one figure per goal this card stands for
+  const sect = (title, m, reply, k) =>
+    `<details open><summary><span>${title}</span><b>${figs(m)}</b></summary>` +
+    goalStatsHtml(m, mode === 'land', holderRel) +
+    `<div class="dice" style="margin-top:6px">${t.theirReply}</div>${layoutHtml(mode, reply)}` +
+    `<div class="applyrow">${onBoard(r.side, g.units, 1 - r.side, reply) ? `<span class="dice">${t.onBoard}</span>`
+      : `<button type="button" data-first="${i}:${k}">${t.recApply}</button>`}</div></details>`;
+  let h = `<details class="pred" open><summary>${t.predTitle}</summary><div class="hint">${t.predHint} ${t.predFigure}</div>`;
+  (g.predictions || []).forEach((p, k) => { h += sect(t.objE[p.objective], p.metrics, p.reply, k); });
+  return h + '</details>';
+}
+function renderRecFirst(r, mode, holderRel, box) {
+  const t = T();
+  // Goals that ended up with the same layout share one card (their replies and figures are identical).
+  const byLayout = new Map();
+  for (const o of r.options) {
+    const k = JSON.stringify(o.units);
+    if (!byLayout.has(k)) byLayout.set(k, { units: o.units, predictions: o.predictions, objs: [] });
+    byLayout.get(k).objs.push(o.objective);
+  }
+  const groups = [...byLayout.values()].sort((a, b) => b.objs.includes('balanced') - a.objs.includes('balanced'));
+  let h = '<div class="recs">';
+  groups.forEach((g, i) => {
+    h += `<div class="card"><h4>${g.objs.map((ob) => t.obj[ob]).join('<br>')}${g.objs.includes('balanced') ? `<br><span class="dice">${t.defaultTag}</span>` : ''}</h4>${layoutHtml(mode, g.units)}` +
+         predictHtml(g, i, mode, r, holderRel) + '</div>';
+  });
+  h += `</div><div class="note">${t.recNoteFirst}</div>`;
+  box.innerHTML = h;
+  box.querySelectorAll('[data-first]').forEach((b) => b.addEventListener('click', () => {
+    const [i, k] = b.dataset.first.split(':').map(Number), g = groups[i];
+    $('recSide').value = String(r.side);
+    // These cards do not depend on the layout on the board, so keep them and only refresh the battle result.
+    const keep = lastRec;
+    putOnBoard(r.side, mode, g.units);
+    putOnBoard(1 - r.side, mode, g.predictions[k].reply);
+    lastRec = keep; renderRec(); doCalculate();
+  }));
+}
+async function doRecommend() {
+  const cfg = readConfig(), f = +$('recSide').value, holder = +$('recHolder').value, first = $('recOrder').value === 'first';
+  const total = cfg.sides.reduce((n, sd) => n + Object.values(sd.units).flat().reduce((a, b) => a + b, 0), 0);
+  if (!total) { lastRec = null; $('recOut').innerHTML = `<p class="dice">${T().addUnits}</p>`; return; }
+  $('recGo').disabled = true; const myRun = ++recRun;
+  const res = await (first ? WarRoomRec.recommendFirst : WarRoomRec.recommend)(cfg, f, { holder, onProgress: (p) => { if (myRun !== recRun) return; $('recProg').textContent = `${T().recBusy} ${Math.round(p * 100)}%`; } });
+  if (myRun !== recRun) return;                    // Reset was pressed while searching
+  $('recProg').textContent = ''; $('recGo').disabled = false;
+  const rec = res ? { res, mode: cfg.mode, holder: cfg.mode === 'land' ? holder : null } : { none: true };
+  // "I set first": the default card (best cost exchange) goes straight onto the board, no extra click.
+  if (first && res) {
+    const base = res.options.find((o) => o.objective === 'balanced') || res.options[0];
+    const pr = base.predictions.find((x) => x.objective === base.objective) || base.predictions[0];   // they play for the same trade
+    putOnBoard(res.side, cfg.mode, base.units);
+    putOnBoard(1 - res.side, cfg.mode, pr.reply);
+  }
+  if (!first && res) {                              // same here: the default card (best cost exchange) goes straight onto the board
+    const base = res.options.find((o) => o.objective === 'balanced') || res.options[0];
+    putOnBoard(res.side, cfg.mode, base.units);
+  }
+  lastRec = rec;
+  renderRec();
+  if (res) doCalculate();                 // show the battle result for the layout that is now on the board
+}
+$('recGo').addEventListener('click', doRecommend);
+const holderBox = () => { $('holderBox').style.display = $('mode').value === 'land' ? '' : 'none'; };   // only land battles have control
+$('recHolder').addEventListener('change', () => { holderAuto = false; recRun++; lastRec = null; $('recOut').innerHTML = ''; $('recProg').textContent = ''; $('recGo').disabled = false; saveState(); });
+$('mode').addEventListener('change', holderBox);
+$('recOrder').addEventListener('change', () => { recRun++; lastRec = null; $('recOut').innerHTML = ''; $('recProg').textContent = ''; $('recGo').disabled = false; saveState(); });
+$('recSide').addEventListener('change', () => {
+  if (holderAuto) $('recHolder').value = $('recSide').value;            // by default the advised side is the one holding the land
+  recRun++; lastRec = null; $('recOut').innerHTML = ''; $('recProg').textContent = ''; $('recGo').disabled = false; saveState(); });
+$('runs').addEventListener('change', saveState);
+
+$('reset').addEventListener('click', () => {
+  invalidateResults();                              // clears results and cancels anything still running
+  sel = null;
+  state.land = [{}, {}]; state.sea = [{}, {}]; state.port = [false, false];   // start from scratch: no units, no port ticks
+  $('results').innerHTML = ''; $('recProg').textContent = ''; $('recGo').disabled = false; $('go').disabled = false;
+  renderRec(); buildTables();
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);   // drop the share code
+});
+
+restoreState();
+if (holderAuto) $('recHolder').value = $('recSide').value;
+holderBox();
+applyStatic();
+buildTables();
+if (lastResult) render(lastResult.cfg, lastResult.out);     // bring back what was on screen before the refresh
+if (lastRec) renderRec();
+loadFromHash();                                             // a shared link, if present, takes priority
+</script>
+</body>
+</html>
