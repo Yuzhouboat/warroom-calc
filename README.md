@@ -13,6 +13,10 @@ A browser-based companion for the **War Room** board game, with land and sea bat
 
 **No dependencies · No build step · English / 中文**
 
+**English** · [简体中文](README.zh-CN.md)
+
+[**▶ Try the live calculator**](https://yuzhouboat.github.io/warroom-calc/)
+
 [Feature tour](#feature-tour) · [Quick start](#quick-start) · [How to use](#how-to-use) · [Deploy](#deploy-with-github-pages)
 
 </div>
@@ -99,11 +103,11 @@ GitHub Pages can serve this app directly from the repository. **There is no buil
 4. Select **`main`** and **`/ (root)`**, then click **Save**.
 5. Wait for the Pages deployment to finish. The **Actions** tab shows its progress, and **Settings → Pages** displays the published URL.
 
-For this repository, the default site address will be:
+This repository is live at:
 
 **[https://yuzhouboat.github.io/warroom-calc/](https://yuzhouboat.github.io/warroom-calc/)**
 
-That address becomes available after Pages is enabled and the first deployment succeeds. For a fork, replace `yuzhouboat` with your GitHub username and use your repository's name.
+For a fork, replace `yuzhouboat` with your GitHub username and use your repository's name. Your address becomes available after Pages is enabled and the first deployment succeeds.
 
 **Updating the site:** push changes to `main`; GitHub Pages republishes the site automatically.
 
@@ -147,7 +151,8 @@ warroom-calc/
 ├── recommend.js    # Stance recommendation search (browser and Node.js)
 ├── icons/          # Unit artwork
 ├── docs/screenshots/ # Feature screenshots used in this README
-└── README.md
+├── README.md       # English guide
+└── README.zh-CN.md # Chinese guide
 ```
 
 To change the interface or translations, edit `index.html`. Combat logic lives in `engine.js`, and recommendation logic lives in `recommend.js`. Refresh the browser after editing; no compilation is needed.
