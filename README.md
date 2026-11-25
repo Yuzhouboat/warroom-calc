@@ -11,13 +11,13 @@ A browser-based companion for the **War Room** board game, with land and sea bat
 <img src="icons/fighter.png" height="48" alt="Fighter"> &nbsp;
 <img src="icons/battleship.png" width="100" alt="Battleship">
 
-**No dependencies · No build step · English / 中文**
+**Land & sea battles · Runs in your browser · English / 中文**
 
 **English** · [简体中文](README.zh-CN.md)
 
 [**▶ Try the live calculator**](https://yuzhouboat.github.io/warroom-calc/)
 
-[Feature tour](#feature-tour) · [Quick start](#quick-start) · [How to use](#how-to-use) · [Deploy](#deploy-with-github-pages)
+[How to use](#how-to-use) · [Feature tour](#feature-tour) · [Understanding the estimates](#understanding-the-estimates) · [Technical details](#technical-details)
 
 </div>
 
@@ -37,7 +37,20 @@ A browser-based companion for the **War Room** board game, with land and sea bat
 | **Save & share** | Keep settings in your browser and share a battle setup with a link. |
 | **Bilingual interface** | Switch between English and Chinese with the language button. |
 
-All calculations run in your browser. No account, API key, database, or backend is required.
+Open the live calculator to get started. No account or installation is required.
+
+## How to use
+
+[**Open the calculator →**](https://yuzhouboat.github.io/warroom-calc/)
+
+1. Choose **Land** or **Sea** and a simulation run count. Start with the default **20,000** runs.
+2. Add units to the **Axis** and **Allies** panels using the number fields or `+` / `−` buttons.
+3. Move units into their desired stances and set port advantage for a sea battle when applicable.
+4. Click **Calculate** to see outcome probabilities and expected losses and survivors.
+5. To explore alternatives, choose the side to advise and click **Find best setup**. For land battles, also select who currently holds the territory.
+6. Compare the recommendation cards and use **Apply** to inspect a layout. Use the share button beneath the results to copy a setup link.
+
+Open **Rules applied by this calculator** inside the app for the detailed combat rules and assumptions.
 
 ## Feature tour
 
@@ -66,7 +79,21 @@ Build a fleet with submarines, cruisers, carriers, and battleships, add air supp
 
 Screenshots show example forces and simulation estimates, rather than guaranteed battle outcomes.
 
-## Quick start
+## Understanding the estimates
+
+- Results are Monte Carlo estimates, so probabilities can vary between runs. More runs generally give steadier estimates.
+- Damaged units count as survivors; repair costs are not included in loss estimates.
+- Some rules and actions are outside the simulation. The app's built-in rules section lists these limits and explains targeting assumptions.
+- Recommendation searches for larger forces use a heuristic and are not guaranteed to find the best possible layout.
+
+---
+
+## Technical details
+
+<details>
+<summary><strong>Setup, deployment, troubleshooting, and source code — click to expand</strong></summary>
+
+### Run locally
 
 You need **Git** to clone the repository and **Python 3** to run a local web server.
 
@@ -82,18 +109,7 @@ On Windows, use `py -m http.server 8000 --bind 127.0.0.1` if `python3` is unavai
 
 > Already have this repository on your computer? Open a terminal in its folder and run only the server command.
 
-## How to use
-
-1. Choose **Land** or **Sea** and a simulation run count. Start with the default **20,000** runs.
-2. Add units to the **Axis** and **Allies** panels using the number fields or `+` / `−` buttons.
-3. Move units into their desired stances and set port advantage for a sea battle when applicable.
-4. Click **Calculate** to see outcome probabilities and expected losses and survivors.
-5. To explore alternatives, choose the side to advise and click **Find best setup**. For land battles, also select who currently holds the territory.
-6. Compare the recommendation cards and use **Apply** to inspect a layout. Use the share button beneath the results to copy a setup link.
-
-Open **Rules applied by this calculator** inside the app for the detailed combat rules and assumptions.
-
-## Deploy with GitHub Pages
+### Deploy with GitHub Pages
 
 GitHub Pages can serve this app directly from the repository. **There is no build command or package installation.**
 
@@ -113,7 +129,7 @@ For a fork, replace `yuzhouboat` with your GitHub username and use your reposito
 
 GitHub Pages is available for public repositories on GitHub Free; private repository support depends on your plan. See [GitHub's publishing instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site) for details.
 
-### Other static hosts
+#### Other static hosts
 
 You can also upload these files to any static web host, preserving their relative paths:
 
@@ -126,7 +142,7 @@ icons/
 
 Serve `index.html` as the entry page. No environment variables or server-side runtime are needed.
 
-### Deployment troubleshooting
+#### Deployment troubleshooting
 
 | Symptom | What to check |
 | --- | --- |
@@ -135,14 +151,7 @@ Serve `index.html` as the entry page. No environment variables or server-side ru
 | The site still shows an older version | Wait for the deployment to finish, then refresh with your browser's cache bypass shortcut. |
 | Local port 8000 is already in use | Run the server with `8001` instead and open `http://localhost:8001`. |
 
-## Understanding the estimates
-
-- Results are Monte Carlo estimates, so probabilities can vary between runs. More runs generally give steadier estimates.
-- Damaged units count as survivors; repair costs are not included in loss estimates.
-- Some rules and actions are outside the simulation. The app's built-in rules section lists these limits and explains targeting assumptions.
-- Recommendation searches for larger forces use a heuristic and are not guaranteed to find the best possible layout.
-
-## Project files
+### Project files
 
 ```text
 warroom-calc/
@@ -156,3 +165,5 @@ warroom-calc/
 ```
 
 To change the interface or translations, edit `index.html`. Combat logic lives in `engine.js`, and recommendation logic lives in `recommend.js`. Refresh the browser after editing; no compilation is needed.
+
+</details>
